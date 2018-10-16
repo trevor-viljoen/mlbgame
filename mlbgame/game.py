@@ -190,14 +190,7 @@ class GameScoreboard(object):
         # loop through data
         for x in data:
             # set information as correct data type
-            try:
-                setattr(self, x, int(data[x]))
-            except ValueError:
-                try:
-                    setattr(self, x, float(data[x]))
-                except ValueError:
-                    # string if not number
-                    setattr(self, x, str(data[x]))
+            mlbgame.object.setobjattr(self, x, data[x])
         # calculate the winning team
         if self.home_team_runs > self.away_team_runs:
             self.w_team = self.home_team
