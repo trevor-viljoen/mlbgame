@@ -11,14 +11,14 @@ import mlbgame.data
 import mlbgame.object
 
 
-def scoreboard(year, month, day, home=None, away=None):
+def scoreboard(year, month, day, home=None, away=None, session=None):
     """Return the scoreboard information for games matching the parameters
     as a dictionary.
     """
     # get data
-    data = mlbgame.data.get_scoreboard(year, month, day)
+    data = mlbgame.data.get_scoreboard(year, month, day, session)
     # parse data
-    parsed = etree.parse(data)
+    parsed = etree.ElementTree(etree.XML(data))
     root = parsed.getroot()
     games = {}
     output = {}
@@ -217,12 +217,12 @@ class GameScoreboard(object):
         return self.nice_score()
 
 
-def box_score(game_id):
+def box_score(game_id, session=None):
     """Gets the box score information for the game with matching id."""
     # get data
-    data = mlbgame.data.get_box_score(game_id)
+    data = mlbgame.data.get_box_score(game_id, session)
     # parse data
-    parsed = etree.parse(data)
+    parsed = etree.ElementTree(etree.XML(data))
     root = parsed.getroot()
     linescore = root.find('linescore')
     result = dict()
@@ -322,13 +322,13 @@ class GameBoxScore(object):
         return output
 
 
-def overview(game_id):
+def overview(game_id, session=None):
     """Gets the overview information for the game with matching id."""
     output = {}
     # get data
-    overview = mlbgame.data.get_overview(game_id)
+    overview = mlbgame.data.get_overview(game_id, session)
     # parse data
-    overview_root = etree.parse(overview).getroot()
+    overview_root = etree.XML(overview).getroot()
 
     try:
         output = add_raw_box_score_attributes(output, game_id)
@@ -357,11 +357,11 @@ def overview(game_id):
     return output
 
 
-def add_raw_box_score_attributes(output, game_id):
+def add_raw_box_score_attributes(output, game_id, session=None):
     # rawboxscore may not be available prior to a game
-    raw_box_score = mlbgame.data.get_raw_box_score(game_id)
+    raw_box_score = mlbgame.data.get_raw_box_score(game_id, session)
     try:
-        raw_box_score_root = etree.parse(raw_box_score).getroot()
+        raw_box_score_root = etree.XML(raw_box_score).getroot()
         # get raw box score attributes
         for attr in raw_box_score_root.attrib:
             output[attr] = raw_box_score_root.attrib[attr]
@@ -538,12 +538,12 @@ class Overview(mlbgame.object.Object):
     pass
 
 
-def players(game_id):
+def players(game_id, session=None):
     """Gets player/coach/umpire information for the game with matching id."""
     # get data
-    data = mlbgame.data.get_players(game_id)
+    data = mlbgame.data.get_players(game_id, session)
     # parse data
-    parsed = etree.parse(data)
+    parsed = etree.ElementTree(etree.XML(data))
     root = parsed.getroot()
 
     output = {}
