@@ -122,6 +122,8 @@ And the output is:
     Bartolo Colon (P)
 
 """
+from multiprocessing import Pool
+import requests
 
 import mlbgame.events
 import mlbgame.game
@@ -136,7 +138,7 @@ VERSION = mlbgame.version.__version__
 """Installed version of mlbgame."""
 
 
-def day(year, month, day, home=None, away=None):
+def day(year, month, day, home=None, away=None, session=None):
     """Return a list of games for a certain day.
 
     If the home and away team are the same,
@@ -148,11 +150,11 @@ def day(year, month, day, home=None, away=None):
     if daysinmonth < day:
         return []
     # get data
-    data = mlbgame.game.scoreboard(year, month, day, home=home, away=away)
+    data = mlbgame.game.scoreboard(year, month, day, home=home, away=away, session=session)
     return [mlbgame.game.GameScoreboard(data[x]) for x in data]
 
 
-def games(years, months=None, days=None, home=None, away=None):
+def games(years, months=None, days=None, home=None, away=None, session=None):
     """Return a list of lists of games for multiple days.
 
     If home and away are the same team, it will return all games for that team.
@@ -163,6 +165,7 @@ def games(years, months=None, days=None, home=None, away=None):
     if days is None:
         days = list(range(1, 32))
     results = []
+    game_list = []
     # check if lists, if not make lists
     # allows users to input either numbers or lists
     if not isinstance(years, list):
@@ -178,16 +181,26 @@ def games(years, months=None, days=None, home=None, away=None):
             for x in days:
                 if daysinmonth >= x:
                     # use the day function to get data for each day in range
-                    game = day(i, y, x, home=home, away=away)
-                    if game:
-                        results.append(game)
+                    game_list.append((i, y, x, home, away, session))
+    p = Pool()
+    try:
+        # flatten list of lists
+        #results = [i for g in p.starmap(day, game_list) for i in g if g]
+        results = [g for g in  p.starmap(day, game_list) if g]
+    finally:
+        p.close()
+        p.join()
     return results
+    #finally:
+    #    results = [g for g in pool.join() if g]
+    #
+    #return results
 
 
-def box_score(game_id):
+def box_score(game_id, session=None):
     """Return box score for game matching the game id."""
     # get box score data
-    data = mlbgame.game.box_score(game_id)
+    data = mlbgame.game.box_score(game_id, session)
     # create object with data
     obj = mlbgame.game.GameBoxScore(data)
     return obj
@@ -208,21 +221,21 @@ def combine_games(games):
     return [y for x in games for y in x]
 
 
-def player_stats(game_id):
+def player_stats(game_id, session=None):
     """Return dictionary of player stats for game matching the game id."""
     # get information for that game
-    data = mlbgame.stats.player_stats(game_id)
+    data = mlbgame.stats.player_stats(game_id, session)
     return mlbgame.stats.Stats(data, game_id, True)
 
 
-def team_stats(game_id):
+def team_stats(game_id, session=None):
     """Return dictionary of team stats for game matching the game id."""
     # get data
-    data = mlbgame.stats.team_stats(game_id)
+    data = mlbgame.stats.team_stats(game_id, session)
     return mlbgame.stats.Stats(data, game_id, False)
 
 
-def game_events(game_id, innings_endpoint=False):
+def game_events(game_id, innings_endpoint=False, session=None):
     """Return list of Inning objects for game matching the game id.
 
     Using `inning_endpoints=True` will result in objects with
@@ -231,14 +244,14 @@ def game_events(game_id, innings_endpoint=False):
 
     `innings_endpoint`: bool, use more detailed `innings` API endpoint
     """
-    data = mlbgame.events.game_events(game_id, innings_endpoint)
+    data = mlbgame.events.game_events(game_id, innings_endpoint, session)
     return [mlbgame.events.Inning(data[x], x) for x in data]
 
 
-def important_dates(year=None):
+def important_dates(year=None, session=None):
     """Return ImportantDates object that contains MLB important dates"""
     year = datetime.now().year if not year else year
-    data = mlbgame.info.important_dates(year)
+    data = mlbgame.info.important_dates(year, session)
     return mlbgame.info.ImportantDates(data)
 
 
@@ -252,31 +265,31 @@ def teams():
     return [mlbgame.info.Info(x) for x in mlbgame.info.team_info()]
 
 
-def roster(team_id):
+def roster(team_id, session=None):
     """Return Roster object that contains roster info for a team"""
-    data = mlbgame.info.roster(team_id)
+    data = mlbgame.info.roster(team_id, session)
     return mlbgame.info.Roster(data)
 
 
-def standings(date=datetime.now()):
+def standings(date=datetime.now(), session=None):
     """Return Standings object that contains standings info
 
     date should be a datetime object,
     leave empty to get current standings
     """
-    data = mlbgame.info.standings(date)
+    data = mlbgame.info.standings(date, session)
     return mlbgame.info.Standings(data)
 
 
-def injury():
+def injury(session=None):
     """Return Injuries object that contains injury info"""
-    data = mlbgame.info.injury()
+    data = mlbgame.info.injury(session)
     return mlbgame.info.Injuries(data)
 
 
-def broadcast_info(team_id, date=datetime.now()):
+def broadcast_info(team_id, date=datetime.now(), session=None):
     """Return BroadcastInfo object that containts information
     about the television and radio broadcasts for the team_id
     and year"""
-    data = mlbgame.info.broadcast_info(team_id, date)
+    data = mlbgame.info.broadcast_info(team_id, date, session)
     return [mlbgame.info.BroadcastInfo(x) for x in data]
